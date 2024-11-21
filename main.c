@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 typedef struct{
     char nom[20];
@@ -41,10 +42,18 @@ typedef struct{
     accessoire exemple;
 }accessoire_roulotte;
 
-typedef struct{
+typedef struct Cellule1{ //PERSONNAGE DISPONIBLE, PERSONNAGE COMBATTANT, PERSONNAGE SANITARIUM, PERSONNAGE TAVERNE
     personnage perso;
-    struct cel * suivant;
-}Cellule, *Liste;
+    struct Cellule1 *suivant;
+}Cellule1, *ListePers;
+
+typedef struct Cellule2{ //ACCESSOIRE DISPONIBLE, ACCESSOIRE EN VENTE
+    accessoire access;
+    struct Cellule2 *suivant;
+}Cellule2, *ListeAccess;
+
+
+
 
 
 void affiche_classe(classe_personnage exemple){
@@ -88,29 +97,85 @@ int saisie_choix() {
     return choix;
 }
 
-Liste alloueCellule(personnage exemple){
-    Liste tmp;
-    tmp = (Cellule *)malloc(sizeof(Cellule));
+ListePers alloueCellule1(personnage exemple){
+    ListePers tmp;
+    tmp = (Cellule1 *)malloc(sizeof(Cellule1));
     if(tmp == NULL){
-        printf("Erreur d'allocation mem");
-        exit(1);
+        return NULL; //SI ECHEC
     }
     else{
         tmp->perso = exemple;
         tmp->suivant = NULL;
-        return tmp;
+        return tmp;//SINON
     }
 }
 
-Liste inserePersonnageTete(Liste *lst, personnage exemple){
-    Liste tmp;
-    tmp = alloueCellule(exemple);
+ListeAccess alloueCellule2(accessoire exemple){
+    ListeAccess tmp;
+    tmp = (Cellule2 *)malloc(sizeof(Cellule2));
+    if(tmp == NULL){
+        return NULL; //SI ECHEC
+    }
+    else{
+        tmp->access = exemple;
+        tmp->suivant = NULL;
+        return tmp;//SINON
+    }
+}
+
+int inserePersonnageTete(ListePers *lst, personnage exemple){
+    ListePers tmp = alloueCellule1(exemple);
     if(tmp != NULL){
         tmp->suivant = *lst;
         *lst = tmp;
+        return 1;//SINON
     }
-    return tmp;
+    return 0;//SI ECHEC
 }
+
+int inserePersonnageSuite(ListePers *lst, personnage exemple){
+    ListePers newCell = alloueCellule1(exemple);
+
+    if(*lst != NULL && newCell != NULL){
+        ListePers temp = *lst;
+        while(temp->suivant != NULL){
+            temp = temp->suivant;
+        }
+        temp->suivant = newCell;
+        return 1;//SINON
+    }
+    return 0;//SINON
+
+}
+
+int supprimePersonnage(ListePers *lst, char nom[]){
+    if (*lst == NULL){ //LISTE VIDE
+        return 0;;
+        
+    }
+    ListePers temp = *lst;
+    ListePers prev = NULL;
+
+    if(strcmp(temp->perso.nom, nom) == 0){//SI ELEM A TROUVER EST PREMIER ELEM
+        *lst = temp->suivant;
+        free(temp);
+        return 1;
+    }
+
+    while(temp != NULL && (strcmp(temp->perso.nom, nom) != 0)){ //SINON
+        prev = temp;
+        temp = temp->suivant;
+    }
+
+    if(temp == NULL){ //PAS TROUVE
+        return 0;
+    }
+
+    prev->suivant = temp->suivant;//SINON
+    free(temp);
+    return 1;
+}
+
 
     
 void sanitarium(personnage *exemple){
@@ -118,7 +183,6 @@ void sanitarium(personnage *exemple){
     int chance = rand() %5;
     if((exemple->HP + 5 + chance) > exemple->classe.HPmax){
         
-        int test = exemple->HP + 5 + chance;
         int augmentation = exemple->classe.HPmax - exemple->HP;
         printf("\n%s est passé au sanitarium!      +%d HP!\n",exemple->nom ,augmentation);
         exemple->HP = exemple->classe.HPmax;
@@ -144,20 +208,37 @@ void roulotte(){
 
 }
 
-void afficheListePerso(Liste lst){
+void afficheListePersoRec(ListePers lst){
     if(lst != NULL){
-        printf("Nom: %s", lst->perso.nom);
-        afficheListePerso(lst->suivant);
+        printf("Nom: %s\n", lst->perso.nom);
+        afficheListePersoRec(lst->suivant);
     }
-    printf("\nfin");
+    printf("\nfin affichage perso\n");
 }
 
-void libererMem(Liste lst){
-    Cellule* courant = lst;
+void afficheListePerso(ListePers lst) {
+    while (lst != NULL) {  // Parcourt la liste tant qu'il y a des éléments
+        printf("Nom: %s\n", lst->perso.nom);
+        lst = lst->suivant;  // Avance au suivant
+    }
+    printf("\nfin affichage personage\n\n");
+}
+
+void libererMem1(ListePers lst){
+    Cellule1* courant = lst;
     while (courant != NULL) {
-        Cellule* temp = courant;         // Sauvegarder le pointeur courant
-        courant = courant->suivant;      // Passer à la cellule suivante
-        free(temp);                      // Libérer la cellule courante
+        Cellule1* temp = courant;         
+        courant = courant->suivant;      
+        free(temp);                      
+    }
+}
+
+void libererMem2(ListeAccess lst){
+    Cellule2* courant = lst;
+    while (courant != NULL) {
+        Cellule2* temp = courant;         
+        courant = courant->suivant;      
+        free(temp);                      
     }
 }
  
@@ -181,13 +262,24 @@ int main(){
     //affiche_personnage(Boudicca);
     //affiche_personnage(Junia); 
 
-    Liste liste_perso = NULL;
+    ListePers liste_perso = NULL;
+    printf("affichage 1\n");
     afficheListePerso(liste_perso);
-    printf("test");
     inserePersonnageTete(&liste_perso, Boudicca);
+    inserePersonnageTete(&liste_perso, Junia);
+    printf("affichage 2\n");
     afficheListePerso(liste_perso);
-    printf("ésdzé");
-    libererMem(liste_perso);
+    inserePersonnageSuite(&liste_perso, William);
+    afficheListePerso(liste_perso);
+
+    //int temp = supprimePersonnage(&liste_perso, "Junia");
+    //printf("%d\n\n", temp);
+    //printf("affichage 3\n");
+    //afficheListePerso(liste_perso);
+
+
+
+    libererMem1(liste_perso);
 
 
 
